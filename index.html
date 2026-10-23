@@ -2,49 +2,42 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#08111f">
-
   <title>SkyCrash Predictor</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
       min-height: 100vh;
       padding: 20px;
       background: #08111f;
-      color: #ffffff;
+      color: #fff;
       font-family: Arial, sans-serif;
     }
 
     .container {
       width: 100%;
       max-width: 440px;
-      margin: 30px auto;
+      margin: 25px auto;
     }
 
-    .header {
+    header {
       text-align: center;
       margin-bottom: 25px;
     }
 
-    .logo {
-      font-size: 38px;
-      margin-bottom: 8px;
-    }
+    .logo { font-size: 38px; }
 
     h1 {
-      margin: 0;
-      font-size: 27px;
+      margin: 8px 0;
       color: #45e6a0;
+      font-size: 27px;
     }
 
     .subtitle {
-      margin-top: 9px;
       color: #aab7ca;
       font-size: 14px;
     }
@@ -55,6 +48,23 @@
       border: 1px solid #25344b;
       border-radius: 18px;
       background: #111d30;
+    }
+
+    label {
+      display: block;
+      margin: 14px 0 7px;
+      color: #cbd5e1;
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #34465f;
+      border-radius: 9px;
+      background: #08111f;
+      color: #fff;
+      font-size: 16px;
     }
 
     .label {
@@ -70,6 +80,7 @@
       font-size: 48px;
       font-weight: bold;
       text-align: center;
+      overflow-wrap: anywhere;
     }
 
     .status {
@@ -80,6 +91,7 @@
       text-align: center;
       font-size: 14px;
       line-height: 1.5;
+      overflow-wrap: anywhere;
     }
 
     .button {
@@ -96,23 +108,27 @@
       cursor: pointer;
     }
 
+    .button.secondary {
+      background: #26374e;
+      color: #fff;
+    }
+
     .button:disabled {
-      opacity: 0.6;
+      opacity: .6;
       cursor: not-allowed;
     }
 
     .history-item {
       display: flex;
       justify-content: space-between;
+      gap: 12px;
       padding: 12px 0;
       border-bottom: 1px solid #25344b;
       color: #dce7f5;
       font-size: 14px;
     }
 
-    .history-item:last-child {
-      border-bottom: none;
-    }
+    .history-item:last-child { border-bottom: none; }
 
     .note {
       color: #aab7ca;
@@ -120,6 +136,8 @@
       line-height: 1.6;
       text-align: center;
     }
+
+    .hidden { display: none !important; }
 
     footer {
       margin-top: 25px;
@@ -132,63 +150,218 @@
 
 <body>
   <main class="container">
-
-    <header class="header">
+    <header>
       <div class="logo">🚀</div>
       <h1>SkyCrash Predictor</h1>
-      <p class="subtitle">
-        Private dashboard for your own SkyCrash demo
-      </p>
+      <p class="subtitle">Private dashboard for your own SkyCrash demo</p>
     </header>
 
-    <section class="card">
-      <div class="label">Next round result</div>
+    <section class="card" id="login-card">
+      <h2>Private Login</h2>
+      <p class="note">Sign in to access your demo dashboard.</p>
 
-      <div class="multiplier" id="multiplier">--. --x</div>
+      <form id="login-form">
+        <label for="password">Predictor password</label>
+        <input
+          id="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          maxlength="200"
+        >
 
-      <div class="status" id="status" role="status">
-        Waiting for a connection to your private server.
-      </div>
+        <button class="button" id="login-button" type="submit">
+          Sign In
+        </button>
+      </form>
 
-      <button class="button" id="refresh-button" type="button">
-        Check Server
-      </button>
+      <p class="status" id="login-status" role="status">
+        Enter your private predictor password.
+      </p>
     </section>
 
-    <section class="card">
-      <div class="label">Recent round history</div>
+    <section id="dashboard" class="hidden">
+      <section class="card">
+        <div class="label">Current server round result</div>
+        <div class="multiplier" id="multiplier">--.--x</div>
 
-      <div id="history">
-        <p class="note">
-          Round history will appear here after the server is connected.
-        </p>
-      </div>
+        <div class="status" id="status" role="status">
+          Waiting for server data.
+        </div>
+
+        <button class="button" id="refresh-button" type="button">
+          Refresh Result
+        </button>
+
+        <button class="button secondary" id="logout-button" type="button">
+          Log Out
+        </button>
+      </section>
+
+      <section class="card">
+        <div class="label">Recent round history</div>
+        <div id="history">
+          <p class="note">History has not loaded yet.</p>
+        </div>
+      </section>
     </section>
 
     <p class="note">
-      This dashboard is intended for your own controlled demo.
-      It does not predict results from third-party crash games.
+      For your own controlled demo only. This dashboard does not predict
+      outcomes from third-party crash games.
     </p>
 
-    <footer>
-      SkyCrash Predictor · Private Demo
-    </footer>
-
+    <footer>SkyCrash Predictor · Private Demo</footer>
   </main>
 
   <script>
-    /*
-      The private server connection will be added in a later step.
-      Do not display fabricated multipliers as predicted results.
-    */
+    "use strict";
 
-    const refreshButton = document.getElementById("refresh-button");
+    const API_BASE = "https://skycrash-predictor.onrender.com";
+
+    const loginCard = document.getElementById("login-card");
+    const dashboard = document.getElementById("dashboard");
+    const loginForm = document.getElementById("login-form");
+    const passwordInput = document.getElementById("password");
+    const loginButton = document.getElementById("login-button");
+    const loginStatus = document.getElementById("login-status");
+    const multiplierElement = document.getElementById("multiplier");
     const statusElement = document.getElementById("status");
+    const historyElement = document.getElementById("history");
+    const refreshButton = document.getElementById("refresh-button");
+    const logoutButton = document.getElementById("logout-button");
 
-    refreshButton.addEventListener("click", function () {
-      statusElement.textContent =
-        "The private server has not been connected yet. Continue with setup.";
+    let sessionToken = null;
+
+    async function apiRequest(path, options = {}) {
+      const headers = {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      };
+
+      if (sessionToken) {
+        headers.Authorization = "Bearer " + sessionToken;
+      }
+
+      const response = await fetch(API_BASE + path, {
+        ...options,
+        headers,
+        cache: "no-store"
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "Request failed (" + response.status + ")."
+        );
+      }
+
+      return data;
+    }
+
+    loginForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const password = passwordInput.value;
+
+      if (!password) {
+        loginStatus.textContent = "Enter your password.";
+        return;
+      }
+
+      loginButton.disabled = true;
+      loginStatus.textContent = "Signing in...";
+
+      try {
+        const data = await apiRequest("/api/login", {
+          method: "POST",
+          body: JSON.stringify({ password })
+        });
+
+        sessionToken = data.token;
+        passwordInput.value = "";
+
+        loginCard.classList.add("hidden");
+        dashboard.classList.remove("hidden");
+
+        await loadDashboard();
+      } catch (error) {
+        loginStatus.textContent =
+          error.message === "Failed to fetch"
+            ? "Could not reach the server. Check your connection and server status."
+            : error.message;
+      } finally {
+        loginButton.disabled = false;
+      }
     });
+
+    async function loadDashboard() {
+      statusElement.textContent = "Loading current round...";
+
+      try {
+        const [round, historyData] = await Promise.all([
+          apiRequest("/api/next-round"),
+          apiRequest("/api/history")
+        ]);
+
+        multiplierElement.textContent =
+          Number(round.crashAt).toFixed(2) + "x";
+
+        statusElement.textContent =
+          "Server round #" + round.roundId +
+          " · Status: " + round.status +
+          " · Created: " + new Date(round.createdAt).toLocaleString();
+
+        renderHistory(historyData.rounds || []);
+      } catch (error) {
+        statusElement.textContent = error.message;
+
+        if (error.message.toLowerCase().includes("log in")) {
+          logout();
+        }
+      }
+    }
+
+    function renderHistory(rounds) {
+      historyElement.replaceChildren();
+
+      if (!rounds.length) {
+        const empty = document.createElement("p");
+        empty.className = "note";
+        empty.textContent = "No rounds recorded yet.";
+        historyElement.appendChild(empty);
+        return;
+      }
+
+      rounds.forEach(function (round) {
+        const row = document.createElement("div");
+        row.className = "history-item";
+
+        const name = document.createElement("span");
+        name.textContent = "Round #" + round.roundId;
+
+        const value = document.createElement("strong");
+        value.textContent = Number(round.crashAt).toFixed(2) + "x";
+
+        row.append(name, value);
+        historyElement.appendChild(row);
+      });
+    }
+
+    refreshButton.addEventListener("click", loadDashboard);
+
+    function logout() {
+      sessionToken = null;
+      dashboard.classList.add("hidden");
+      loginCard.classList.remove("hidden");
+      multiplierElement.textContent = "--.--x";
+      statusElement.textContent = "Please sign in again.";
+      historyElement.replaceChildren();
+      passwordInput.value = "";
+    }
+
+    logoutButton.addEventListener("click", logout);
   </script>
 </body>
 </html>
