@@ -2,36 +2,30 @@ const express = require("express");
 const crypto = require("crypto");
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.PREDICTOR_API_KEY;
+const PREDICTOR_PASSWORD = process.env.PREDICTOR_PASSWORD;
+const TOKEN_SECRET = process.env.TOKEN_SECRET;
 
-if (!API_KEY) {
-  console.error("Missing PREDICTOR_API_KEY environment variable.");
+if (!PREDICTOR_PASSWORD || !TOKEN_SECRET) {
+  console.error("Missing PREDICTOR_PASSWORD or TOKEN_SECRET.");
   process.exit(1);
 }
 
-// Demo configuration.
-// Set the same API key in Render's environment variables.
-// Do not put your API key in public frontend code.
 let roundNumber = 0;
 let currentRound = null;
 const history = [];
 
 function generateCrashPoint() {
   const random = crypto.randomInt(1, 1000000) / 1000000;
-
-  const multiplier = Math.max(
-    1.01,
-    Math.min(100, 0.99 / (1 - random))
+  return Number(
+    Math.max(1.01, Math.min(100, 0.99 / (1 - random))).toFixed(2)
   );
-
-  return Number(multiplier.toFixed(2));
 }
 
 function createRound() {
-  roundNumber += 1;
+  roundNumber++;
 
   currentRound = {
     roundId: roundNumber,
@@ -40,36 +34,74 @@ function createRound() {
     status: "waiting"
   };
 
-  history.unshift({
-    roundId: currentRound.roundId,
-    crashAt: currentRound.crashAt,
-    createdAt: currentRound.createdAt
-  });
+  history.unshift({ ...currentRound });
 
-  if (history.length > 20) {
-    history.pop();
-  }
+  if (history.length > 20) history.pop();
 
   return currentRound;
 }
 
-// Create an initial round when the server starts.
 createRound();
 
-function requireApiKey(req, res, next) {
-  const providedKey = req.get("x-api-key");
+function signToken(payload) {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", TOKEN_SECRET)
+    .update(encoded)
+    .digest("base64url");
+
+  return `${encoded}.${signature}`;
+}
+
+function verifyToken(token) {
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+
+  const [encoded, signature] = parts;
+
+  const expected = crypto
+    .createHmac("sha256", TOKEN_SECRET)
+    .update(encoded)
+    .digest();
+
+  let actual;
+
+  try {
+    actual = Buffer.from(signature, "base64url");
+  } catch {
+    return null;
+  }
 
   if (
-    typeof providedKey !== "string" ||
-    Buffer.byteLength(providedKey) !== Buffer.byteLength(API_KEY) ||
-    !crypto.timingSafeEqual(
-      Buffer.from(providedKey),
-      Buffer.from(API_KEY)
-    )
+    actual.length !== expected.length ||
+    !crypto.timingSafeEqual(actual, expected)
   ) {
-    return res.status(401).json({
-      error: "Unauthorized"
-    });
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(
+      Buffer.from(encoded, "base64url").toString()
+    );
+
+    if (payload.expiresAt < Date.now()) return null;
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function requireLogin(req, res, next) {
+  const header = req.get("authorization") || "";
+  const token = header.startsWith("Bearer ")
+    ? header.slice(7)
+    : "";
+
+  const payload = verifyToken(token);
+
+  if (!payload) {
+    return res.status(401).json({ error: "Please log in again." });
   }
 
   next();
@@ -82,40 +114,46 @@ app.get("/", (req, res) => {
   });
 });
 
-// Private endpoint: reveals the current demo round result.
-app.get("/api/next-round", requireApiKey, (req, res) => {
-  res.set("Cache-Control", "no-store");
+app.post("/api/login", (req, res) => {
+  const password = req.body && req.body.password;
 
-  res.json({
-    roundId: currentRound.roundId,
-    crashAt: currentRound.crashAt,
-    createdAt: currentRound.createdAt,
-    status: currentRound.status
+  if (typeof password !== "string" || password.length > 200) {
+    return res.status(400).json({ error: "Invalid login details." });
+  }
+
+  const supplied = Buffer.from(password);
+  const expected = Buffer.from(PREDICTOR_PASSWORD);
+
+  if (
+    supplied.length !== expected.length ||
+    !crypto.timingSafeEqual(supplied, expected)
+  ) {
+    return res.status(401).json({ error: "Incorrect password." });
+  }
+
+  const token = signToken({
+    expiresAt: Date.now() + 30 * 60 * 1000
   });
+
+  res.set("Cache-Control", "no-store");
+  res.json({ token, expiresInSeconds: 1800 });
 });
 
-// Private endpoint: view recent demo rounds.
-app.get("/api/history", requireApiKey, (req, res) => {
+app.get("/api/next-round", requireLogin, (req, res) => {
   res.set("Cache-Control", "no-store");
-
-  res.json({
-    rounds: history
-  });
+  res.json(currentRound);
 });
 
-// Private endpoint: create the next demo round.
-// Your game integration will call this when appropriate.
-app.post("/api/next-round", requireApiKey, (req, res) => {
+app.get("/api/history", requireLogin, (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ rounds: history });
+});
+
+app.post("/api/next-round", requireLogin, (req, res) => {
   const round = createRound();
 
   res.set("Cache-Control", "no-store");
-
-  res.status(201).json({
-    roundId: round.roundId,
-    crashAt: round.crashAt,
-    createdAt: round.createdAt,
-    status: round.status
-  });
+  res.status(201).json(round);
 });
 
 app.listen(PORT, "0.0.0.0", () => {
