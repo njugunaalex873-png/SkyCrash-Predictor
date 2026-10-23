@@ -189,7 +189,16 @@ app.post("/api/next-round", requireLogin, (req, res) => {
   noCache(res);
   res.status(201).json(round);
 });
+// Public game status: never reveal the upcoming crash multiplier.
+app.get("/api/game-status", (req, res) => {
+  noCache(res);
 
+  res.json({
+    roundId: currentRound.roundId,
+    createdAt: currentRound.createdAt,
+    status: currentRound.status
+  });
+});
 // Private game-testing endpoint.
 // The game must authenticate before retrieving the result.
 app.get("/api/game-round", requireLogin, (req, res) => {
