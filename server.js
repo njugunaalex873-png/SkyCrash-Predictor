@@ -3,7 +3,12 @@ const crypto = require("crypto");
 const cors = require("cors");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
+const PREDICTOR_PASSWORD = process.env.PREDICTOR_PASSWORD;
+const TOKEN_SECRET = process.env.TOKEN_SECRET;
+
+// Allow your GitHub Pages websites to connect.
 const allowedOrigins = [
   "https://njugunaalex873-png.github.io"
 ];
@@ -17,18 +22,15 @@ app.use(cors({
 
 app.use(express.json({ limit: "10kb" }));
 
-const PORT = process.env.PORT || 3000;
-const PREDICTOR_PASSWORD = process.env.PREDICTOR_PASSWORD;
-const TOKEN_SECRET = process.env.TOKEN_SECRET;
-
 if (!PREDICTOR_PASSWORD || !TOKEN_SECRET) {
-  console.error("Missing PREDICTOR_PASSWORD or TOKEN_SECRET.");
+  console.error("Missing required environment variables.");
   process.exit(1);
 }
 
 let roundNumber = 0;
 let currentRound = null;
 const history = [];
+const TOKEN_LIFETIME = 30 * 60 * 1000;
 
 function generateCrashPoint() {
   const random = crypto.randomInt(1, 1000000) / 1000000;
@@ -49,15 +51,21 @@ function createRound() {
 
   history.unshift({ ...currentRound });
 
-  if (history.length > 20) history.pop();
+  if (history.length > 50) {
+    history.pop();
+  }
 
   return currentRound;
 }
 
+// Start with the first round.
 createRound();
 
 function signToken(payload) {
-  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const encoded = Buffer
+    .from(JSON.stringify(payload))
+    .toString("base64url");
+
   const signature = crypto
     .createHmac("sha256", TOKEN_SECRET)
     .update(encoded)
@@ -77,13 +85,7 @@ function verifyToken(token) {
     .update(encoded)
     .digest();
 
-  let actual;
-
-  try {
-    actual = Buffer.from(signature, "base64url");
-  } catch {
-    return null;
-  }
+  const actual = Buffer.from(signature, "base64url");
 
   if (
     actual.length !== expected.length ||
@@ -98,7 +100,6 @@ function verifyToken(token) {
     );
 
     if (payload.expiresAt < Date.now()) return null;
-
     return payload;
   } catch {
     return null;
@@ -111,13 +112,17 @@ function requireLogin(req, res, next) {
     ? header.slice(7)
     : "";
 
-  const payload = verifyToken(token);
-
-  if (!payload) {
-    return res.status(401).json({ error: "Please log in again." });
+  if (!verifyToken(token)) {
+    return res.status(401).json({
+      error: "Please log in again."
+    });
   }
 
   next();
+}
+
+function noCache(res) {
+  res.set("Cache-Control", "no-store");
 }
 
 app.get("/", (req, res) => {
@@ -127,11 +132,17 @@ app.get("/", (req, res) => {
   });
 });
 
+// Private predictor login.
 app.post("/api/login", (req, res) => {
   const password = req.body && req.body.password;
 
-  if (typeof password !== "string" || password.length > 200) {
-    return res.status(400).json({ error: "Invalid login details." });
+  if (
+    typeof password !== "string" ||
+    password.length > 200
+  ) {
+    return res.status(400).json({
+      error: "Invalid login details."
+    });
   }
 
   const supplied = Buffer.from(password);
@@ -141,32 +152,55 @@ app.post("/api/login", (req, res) => {
     supplied.length !== expected.length ||
     !crypto.timingSafeEqual(supplied, expected)
   ) {
-    return res.status(401).json({ error: "Incorrect password." });
+    return res.status(401).json({
+      error: "Incorrect password."
+    });
   }
 
   const token = signToken({
-    expiresAt: Date.now() + 30 * 60 * 1000
+    expiresAt: Date.now() + TOKEN_LIFETIME
   });
 
-  res.set("Cache-Control", "no-store");
-  res.json({ token, expiresInSeconds: 1800 });
+  noCache(res);
+
+  res.json({
+    token,
+    expiresInSeconds: TOKEN_LIFETIME / 1000
+  });
 });
 
+// Private endpoint: view the upcoming result.
 app.get("/api/next-round", requireLogin, (req, res) => {
-  res.set("Cache-Control", "no-store");
+  noCache(res);
   res.json(currentRound);
 });
 
+// Private endpoint: view round history.
 app.get("/api/history", requireLogin, (req, res) => {
-  res.set("Cache-Control", "no-store");
+  noCache(res);
   res.json({ rounds: history });
 });
 
+// Private testing endpoint: generate the next round.
+// Only authenticated requests can call this endpoint.
 app.post("/api/next-round", requireLogin, (req, res) => {
   const round = createRound();
 
-  res.set("Cache-Control", "no-store");
+  noCache(res);
   res.status(201).json(round);
+});
+
+// Private game-testing endpoint.
+// The game must authenticate before retrieving the result.
+app.get("/api/game-round", requireLogin, (req, res) => {
+  noCache(res);
+
+  res.json({
+    roundId: currentRound.roundId,
+    crashAt: currentRound.crashAt,
+    createdAt: currentRound.createdAt,
+    status: currentRound.status
+  });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
