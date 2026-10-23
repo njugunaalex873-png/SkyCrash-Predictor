@@ -277,17 +277,22 @@ app.post("/api/start-round", requireLogin, (req, res) => {
   noCache(res);
   res.json(publicRound());
 });
-// Public demo endpoint: start the waiting round.
-// This does not disclose the crash multiplier.
+// Public demo endpoint: start a waiting round or join
+// the current running round. Never reveal crashAt.
 app.post("/api/game-start", (req, res) => {
-  if (!startRound()) {
-    return res.status(409).json({
-      error: "Round is not waiting to start."
-    });
+  noCache(res);
+
+  if (currentRound && currentRound.status === "waiting") {
+    startRound();
   }
 
-  noCache(res);
-  res.json(publicRound());
+  if (currentRound && currentRound.status === "running") {
+    return res.json(publicRound());
+  }
+
+  return res.status(409).json({
+    error: "No round is available yet. Please try again shortly."
+  });
 });
 
 // Private testing endpoint: view the current round's result.
