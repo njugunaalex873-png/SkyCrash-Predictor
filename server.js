@@ -8,13 +8,12 @@ const PORT = process.env.PORT || 3000;
 const PREDICTOR_PASSWORD = process.env.PREDICTOR_PASSWORD;
 const TOKEN_SECRET = process.env.TOKEN_SECRET;
 
-// Allow your GitHub Pages websites to connect.
-const allowedOrigins = [
-  "https://njugunaalex873-png.github.io"
-];
+const ROUND_DURATION_MS = 15000;
+const HISTORY_LIMIT = 50;
+const TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: ["https://njugunaalex873-png.github.io"],
   methods: ["GET", "POST"],
   allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 204
@@ -29,8 +28,8 @@ if (!PREDICTOR_PASSWORD || !TOKEN_SECRET) {
 
 let roundNumber = 0;
 let currentRound = null;
+let roundTimer = null;
 const history = [];
-const TOKEN_LIFETIME = 30 * 60 * 1000;
 
 function generateCrashPoint() {
   const random = crypto.randomInt(1, 1000000) / 1000000;
@@ -39,26 +38,103 @@ function generateCrashPoint() {
   );
 }
 
+function noCache(res) {
+  res.set("Cache-Control", "no-store");
+}
+
+function publicRound() {
+  if (!currentRound) return null;
+
+  return {
+    roundId: currentRound.roundId,
+    createdAt: currentRound.createdAt,
+    startedAt: currentRound.startedAt,
+    endedAt: currentRound.endedAt,
+    status: currentRound.status
+  };
+}
+
+function completeRound() {
+  if (!currentRound || currentRound.status !== "running") return;
+
+  currentRound.status = "crashed";
+  currentRound.endedAt = new Date().toISOString();
+
+  if (roundTimer) {
+    clearTimeout(roundTimer);
+    roundTimer = null;
+  }
+
+  const saved = history.find(
+    item => item.roundId === currentRound.roundId
+  );
+
+  if (saved) {
+    saved.status = "crashed";
+    saved.endedAt = currentRound.endedAt;
+    saved.crashAt = currentRound.crashAt;
+  }
+
+  // Start the next round after a short pause.
+  setTimeout(createRound, 3000);
+}
+
 function createRound() {
+  if (roundTimer) {
+    clearTimeout(roundTimer);
+    roundTimer = null;
+  }
+
   roundNumber++;
 
   currentRound = {
     roundId: roundNumber,
     crashAt: generateCrashPoint(),
     createdAt: new Date().toISOString(),
+    startedAt: null,
+    endedAt: null,
     status: "waiting"
   };
 
-  history.unshift({ ...currentRound });
+  history.unshift({
+    roundId: currentRound.roundId,
+    createdAt: currentRound.createdAt,
+    startedAt: null,
+    endedAt: null,
+    status: "waiting",
+    crashAt: null
+  });
 
-  if (history.length > 50) {
-    history.pop();
-  }
+  if (history.length > HISTORY_LIMIT) history.pop();
 
   return currentRound;
 }
 
-// Start with the first round.
+function startRound() {
+  if (!currentRound || currentRound.status !== "waiting") {
+    return false;
+  }
+
+  currentRound.status = "running";
+  currentRound.startedAt = new Date().toISOString();
+
+  const saved = history.find(
+    item => item.roundId === currentRound.roundId
+  );
+
+  if (saved) {
+    saved.status = "running";
+    saved.startedAt = currentRound.startedAt;
+  }
+
+  roundTimer = setTimeout(
+    completeRound,
+    ROUND_DURATION_MS
+  );
+
+  return true;
+}
+
 createRound();
 
 function signToken(payload) {
@@ -99,7 +175,13 @@ function verifyToken(token) {
       Buffer.from(encoded, "base64url").toString()
     );
 
-    if (payload.expiresAt < Date.now()) return null;
+    if (
+      typeof payload.expiresAt !== "number" ||
+      payload.expiresAt < Date.now()
+    ) {
+      return null;
+    }
+
     return payload;
   } catch {
     return null;
@@ -119,10 +201,6 @@ function requireLogin(req, res, next) {
   }
 
   next();
-}
-
-function noCache(res) {
-  res.set("Cache-Control", "no-store");
 }
 
 app.get("/", (req, res) => {
@@ -153,62 +231,120 @@ app.post("/api/login", (req, res) => {
     !crypto.timingSafeEqual(supplied, expected)
   ) {
     return res.status(401).json({
-      error: "Incorrect password."
+      error: "Incorrect login details."
     });
   }
 
-  const token = signToken({
-    expiresAt: Date.now() + TOKEN_LIFETIME
-  });
-
   noCache(res);
 
   res.json({
-    token,
-    expiresInSeconds: TOKEN_LIFETIME / 1000
+    token: signToken({
+      expiresAt: Date.now() + TOKEN_LIFETIME_MS
+    }),
+    expiresInSeconds: TOKEN_LIFETIME_MS / 1000
   });
 });
 
-// Private endpoint: view the upcoming result.
-app.get("/api/next-round", requireLogin, (req, res) => {
-  noCache(res);
-  res.json(currentRound);
-});
-
-// Private endpoint: view round history.
-app.get("/api/history", requireLogin, (req, res) => {
-  noCache(res);
-  res.json({ rounds: history });
-});
-
-// Private testing endpoint: generate the next round.
-// Only authenticated requests can call this endpoint.
-app.post("/api/next-round", requireLogin, (req, res) => {
-  const round = createRound();
-
-  noCache(res);
-  res.status(201).json(round);
-});
-// Public game status: never reveal the upcoming crash multiplier.
+// Public game status: never disclose the upcoming multiplier.
 app.get("/api/game-status", (req, res) => {
   noCache(res);
+  res.json(publicRound());
+});
+
+// Private predictor: view the upcoming multiplier.
+app.get("/api/next-round", requireLogin, (req, res) => {
+  noCache(res);
 
   res.json({
-    roundId: currentRound.roundId,
-    createdAt: currentRound.createdAt,
-    status: currentRound.status
+    ...publicRound(),
+    crashAt: currentRound.crashAt
   });
 });
-// Private game-testing endpoint.
-// The game must authenticate before retrieving the result.
+
+// Private predictor: recent rounds.
+app.get("/api/history", requireLogin, (req, res) => {
+  noCache(res);
+
+  res.json({
+    rounds: history.map(item => ({ ...item }))
+  });
+});
+
+// Private testing: manually create the next round.
+// Only permitted when the current round has ended.
+app.post("/api/next-round", requireLogin, (req, res) => {
+  if (
+    currentRound &&
+    currentRound.status !== "crashed"
+  ) {
+    return res.status(409).json({
+      error: "The current round has not finished."
+    });
+  }
+
+  createRound();
+
+  noCache(res);
+
+  res.status(201).json({
+    ...publicRound(),
+    crashAt: currentRound.crashAt
+  });
+});
+
+// Private testing endpoint: start the current round.
+app.post("/api/start-round", requireLogin, (req, res) => {
+  if (!startRound()) {
+    return res.status(409).json({
+      error: "Round is not waiting to start."
+    });
+  }
+
+  noCache(res);
+  res.json(publicRound());
+});
+
+// Private testing endpoint: view the current round's result.
 app.get("/api/game-round", requireLogin, (req, res) => {
   noCache(res);
 
   res.json({
-    roundId: currentRound.roundId,
-    crashAt: currentRound.crashAt,
-    createdAt: currentRound.createdAt,
-    status: currentRound.status
+    ...publicRound(),
+    crashAt: currentRound.crashAt
+  });
+});
+
+// Server-authoritative multiplier for the running animation.
+// The exact crash point is not returned.
+app.get("/api/game-multiplier", (req, res) => {
+  noCache(res);
+
+  if (!currentRound || currentRound.status !== "running") {
+    return res.json({
+      ...publicRound(),
+      multiplier: null
+    });
+  }
+
+  const elapsed = Date.now() -
+    new Date(currentRound.startedAt).getTime();
+
+  const multiplier = Number(
+    Math.exp(Math.max(0, elapsed) * 0.00012).toFixed(2)
+  );
+
+  if (multiplier >= currentRound.crashAt) {
+    completeRound();
+
+    return res.json({
+      ...publicRound(),
+      multiplier: null
+    });
+  }
+
+  res.json({
+    ...publicRound(),
+    multiplier
   });
 });
 
