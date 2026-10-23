@@ -79,37 +79,6 @@ function completeRound() {
   setTimeout(createRound, 3000);
 }
 
-function createRound() {
-  if (roundTimer) {
-    clearTimeout(roundTimer);
-    roundTimer = null;
-  }
-
-  roundNumber++;
-
-  currentRound = {
-    roundId: roundNumber,
-    crashAt: generateCrashPoint(),
-    createdAt: new Date().toISOString(),
-    startedAt: null,
-    endedAt: null,
-    status: "waiting"
-  };
-
-  history.unshift({
-    roundId: currentRound.roundId,
-    createdAt: currentRound.createdAt,
-    startedAt: null,
-    endedAt: null,
-    status: "waiting",
-    crashAt: null
-  });
-
-  if (history.length > HISTORY_LIMIT) history.pop();
-
-  return currentRound;
-}
-
 function startRound() {
   if (!currentRound || currentRound.status !== "waiting") {
     return false;
@@ -127,14 +96,19 @@ function startRound() {
     saved.startedAt = currentRound.startedAt;
   }
 
+  // Calculate how long it takes for the multiplier
+  // to reach this round's crash point.
+  const durationMs = Math.ceil(
+    Math.log(currentRound.crashAt) / 0.12 * 1000
+  );
+
   roundTimer = setTimeout(
     completeRound,
-    ROUND_DURATION_MS
+    Math.max(1, durationMs)
   );
 
   return true;
 }
-
 createRound();
 
 function signToken(payload) {
