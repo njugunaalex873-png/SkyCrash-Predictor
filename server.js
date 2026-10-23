@@ -305,20 +305,36 @@ app.get("/api/game-round", requireLogin, (req, res) => {
   });
 });
 
-// Server-authoritative multiplier for the running animation.
-// The exact crash point is not returned.
+// Server-authoritative multiplier for the public game.
+// Reveal the crash point only after the round has crashed.
 app.get("/api/game-multiplier", (req, res) => {
   noCache(res);
 
-  if (!currentRound || currentRound.status !== "running") {
+  if (!currentRound) {
+    return res.json({
+      roundId: null,
+      status: "waiting",
+      multiplier: null
+    });
+  }
+
+  if (currentRound.status === "crashed") {
+    return res.json({
+      ...publicRound(),
+      multiplier: null,
+      crashAt: currentRound.crashAt
+    });
+  }
+
+  if (currentRound.status !== "running") {
     return res.json({
       ...publicRound(),
       multiplier: null
     });
   }
 
-  const elapsed = Date.now() -
-    new Date(currentRound.startedAt).getTime();
+  const elapsed =
+    Date.now() - new Date(currentRound.startedAt).getTime();
 
   const multiplier = Number(
     Math.exp(Math.max(0, elapsed) * 0.00012).toFixed(2)
@@ -329,11 +345,12 @@ app.get("/api/game-multiplier", (req, res) => {
 
     return res.json({
       ...publicRound(),
-      multiplier: null
+      multiplier: null,
+      crashAt: currentRound.crashAt
     });
   }
 
-  res.json({
+  return res.json({
     ...publicRound(),
     multiplier
   });
