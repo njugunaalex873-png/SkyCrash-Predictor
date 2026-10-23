@@ -1,7 +1,20 @@
 const express = require("express");
 const crypto = require("crypto");
+const cors = require("cors");
 
 const app = express();
+
+const allowedOrigins = [
+  "https://njugunaalex873-png.github.io"
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ["GET", "POST"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204
+}));
+
 app.use(express.json({ limit: "10kb" }));
 
 const PORT = process.env.PORT || 3000;
