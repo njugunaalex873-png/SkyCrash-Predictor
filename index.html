@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#08111f">
+
+  <title>SkyCrash Predictor</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 20px;
+      background: #08111f;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      margin: 30px auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .logo {
+      font-size: 38px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 27px;
+      color: #45e6a0;
+    }
+
+    .subtitle {
+      margin-top: 9px;
+      color: #aab7ca;
+      font-size: 14px;
+    }
+
+    .card {
+      padding: 22px;
+      margin-bottom: 18px;
+      border: 1px solid #25344b;
+      border-radius: 18px;
+      background: #111d30;
+    }
+
+    .label {
+      color: #aab7ca;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .multiplier {
+      margin: 20px 0;
+      color: #45e6a0;
+      font-size: 48px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .status {
+      padding: 12px;
+      border-radius: 10px;
+      background: #1b2b40;
+      color: #dce7f5;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .button {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      margin-top: 16px;
+      border: none;
+      border-radius: 10px;
+      background: #45e6a0;
+      color: #08111f;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #25344b;
+      color: #dce7f5;
+      font-size: 14px;
+    }
+
+    .history-item:last-child {
+      border-bottom: none;
+    }
+
+    .note {
+      color: #aab7ca;
+      font-size: 12px;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    footer {
+      margin-top: 25px;
+      color: #718198;
+      font-size: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+
+    <header class="header">
+      <div class="logo">🚀</div>
+      <h1>SkyCrash Predictor</h1>
+      <p class="subtitle">
+        Private dashboard for your own SkyCrash demo
+      </p>
+    </header>
+
+    <section class="card">
+      <div class="label">Next round result</div>
+
+      <div class="multiplier" id="multiplier">--. --x</div>
+
+      <div class="status" id="status" role="status">
+        Waiting for a connection to your private server.
+      </div>
+
+      <button class="button" id="refresh-button" type="button">
+        Check Server
+      </button>
+    </section>
+
+    <section class="card">
+      <div class="label">Recent round history</div>
+
+      <div id="history">
+        <p class="note">
+          Round history will appear here after the server is connected.
+        </p>
+      </div>
+    </section>
+
+    <p class="note">
+      This dashboard is intended for your own controlled demo.
+      It does not predict results from third-party crash games.
+    </p>
+
+    <footer>
+      SkyCrash Predictor · Private Demo
+    </footer>
+
+  </main>
+
+  <script>
+    /*
+      The private server connection will be added in a later step.
+      Do not display fabricated multipliers as predicted results.
+    */
+
+    const refreshButton = document.getElementById("refresh-button");
+    const statusElement = document.getElementById("status");
+
+    refreshButton.addEventListener("click", function () {
+      statusElement.textContent =
+        "The private server has not been connected yet. Continue with setup.";
+    });
+  </script>
+</body>
+</html>
