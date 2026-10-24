@@ -297,30 +297,42 @@
     });
 
     async function loadDashboard() {
-      statusElement.textContent = "Loading current round...";
+  statusElement.textContent = "Loading current round...";
 
-      try {
-        const [round, historyData] = await Promise.all([
-          apiRequest("/api/next-round"),
-          apiRequest("/api/history")
-        ]);
+  try {
+    const [round, historyData] = await Promise.all([
+      apiRequest("/api/next-round"),
+      apiRequest("/api/history")
+    ]);
 
-        multiplierElement.textContent =
-          Number(round.crashAt).toFixed(2) + "x";
+    if (round.status === "running") {
+      const gameData = await apiRequest("/api/game-multiplier");
 
-        statusElement.textContent =
-          "Server round #" + round.roundId +
-          " · Status: " + round.status +
-          " · Created: " + new Date(round.createdAt).toLocaleString();
+      multiplierElement.textContent =
+        gameData.status === "running" &&
+        Number.isFinite(gameData.multiplier)
+          ? gameData.multiplier.toFixed(2) + "x"
+          : "Waiting...";
+    } else if (round.status === "crashed") {
+      multiplierElement.textContent =
+        Number(round.crashAt).toFixed(2) + "x";
+    } else {
+      multiplierElement.textContent = "1.00x";
+    }
 
-        renderHistory(historyData.rounds || []);
-      } catch (error) {
-        statusElement.textContent = error.message;
+    statusElement.textContent =
+      "Server round #" + round.roundId +
+      " · Status: " + round.status +
+      " · Created: " + new Date(round.createdAt).toLocaleString();
 
-        if (error.message.toLowerCase().includes("log in")) {
-          logout();
-        }
-      }
+    renderHistory(historyData.rounds || []);
+  } catch (error) {
+    statusElement.textContent = error.message;
+
+    if (error.message.toLowerCase().includes("log in")) {
+      logout();
+    }
+  }
     }
 
     function renderHistory(rounds) {
