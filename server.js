@@ -105,11 +105,15 @@ function completeRound() {
     saved.crashAt = currentRound.crashAt;
   }
 
-  // Automatically create and start the next round after 2 seconds.
-setTimeout(() => {
-  createRound();
-  startRound();
-}, 2000);
+  // Automatically create the next round after 2 seconds.
+  setTimeout(() => {
+    createRound();
+
+    // Allow 5 seconds for betting before starting.
+    setTimeout(() => {
+      startRound();
+    }, 5000);
+  }, 2000);
 }
 
 function startRound() {
