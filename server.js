@@ -146,7 +146,20 @@ function startRound() {
 
   return true;
 }
-createRound();
+
+function startGameLoop() {
+  createRound();
+
+  console.log("First round created. Starting in 5 seconds...");
+
+  setTimeout(() => {
+    const started = startRound();
+    console.log("First round start result:", started);
+  }, 5000);
+}
+
+startGameLoop();
+
 
 function signToken(payload) {
   const encoded = Buffer
