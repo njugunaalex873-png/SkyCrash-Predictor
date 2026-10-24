@@ -412,6 +412,31 @@ app.get("/api/game-multiplier", (req, res) => {
     multiplier
   });
 });
+// M-Pesa Daraja sandbox callback.
+// Sandbox testing only: this endpoint does not credit balances.
+app.post("/api/mpesa/callback", (req, res) => {
+  const callback = req.body?.Body?.stkCallback;
+
+  if (!callback) {
+    return res.status(400).json({
+      ResultCode: 1,
+      ResultDesc: "Invalid callback payload"
+    });
+  }
+
+  console.log("M-Pesa sandbox callback received:", {
+    checkoutRequestId: callback.CheckoutRequestID,
+    merchantRequestId: callback.MerchantRequestID,
+    resultCode: callback.ResultCode,
+    resultDescription: callback.ResultDesc
+  });
+
+  // Acknowledge the notification without changing any balance.
+  return res.status(200).json({
+    ResultCode: 0,
+    ResultDesc: "Callback received"
+  });
+});
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`SkyCrash Predictor API listening on port ${PORT}`);
