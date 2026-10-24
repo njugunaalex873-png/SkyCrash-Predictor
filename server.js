@@ -111,10 +111,15 @@ function completeRound() {
 
     // Allow 5 seconds for betting before starting.
     setTimeout(() => {
-      startRound();
-    }, 5000);
-  }, 2000);
-}
+  createRound();
+
+  console.log("Betting open: 10 seconds");
+
+  setTimeout(() => {
+    const started = startRound();
+    console.log("Round started:", started);
+  }, 10000);
+}, 2000);
 
 function startRound() {
   if (!currentRound || currentRound.status !== "waiting") {
