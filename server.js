@@ -105,8 +105,11 @@ function completeRound() {
     saved.crashAt = currentRound.crashAt;
   }
 
-  // Start the next round after a short pause.
-  setTimeout(createRound, 3000);
+  // Automatically create and start the next round after 2 seconds.
+setTimeout(() => {
+  createRound();
+  startRound();
+}, 2000);
 }
 
 function startRound() {
