@@ -85,41 +85,43 @@ function publicRound() {
 }
 
 function completeRound() {
-  if (!currentRound || currentRound.status !== "running") return;
+function completeRound() {
+if (!currentRound || currentRound.status !== "running") return;
 
-  currentRound.status = "crashed";
-  currentRound.endedAt = new Date().toISOString();
+currentRound.status = "crashed";
+currentRound.endedAt = new Date().toISOString();
 
-  if (roundTimer) {
-    clearTimeout(roundTimer);
-    roundTimer = null;
-  }
+if (roundTimer) {
+clearTimeout(roundTimer);
+roundTimer = null;
+}
 
-  const saved = history.find(
-    item => item.roundId === currentRound.roundId
-  );
+const saved = history.find(
+item => item.roundId === currentRound.roundId
+);
 
-  if (saved) {
-    saved.status = "crashed";
-    saved.endedAt = currentRound.endedAt;
-    saved.crashAt = currentRound.crashAt;
-  }
+if (saved) {
+saved.status = "crashed";
+saved.endedAt = currentRound.endedAt;
+saved.crashAt = currentRound.crashAt;
+}
 
-  // Automatically create the next round after 2 seconds.
-  setTimeout(() => {
-    createRound();
+console.log("Round crashed:", currentRound.roundId);
 
-    // Allow 5 seconds for betting before starting.
-    setTimeout(() => {
-  createRound();
+// Create the next round after 2 seconds.
+setTimeout(() => {
+createRound();
 
-  console.log("Betting open: 10 seconds");
+console.log("Next round created. Betting open.");
 
-  setTimeout(() => {
-    const started = startRound();
-    console.log("Round started:", started);
-  }, 10000);
+// Start the next round after 5 seconds.
+setTimeout(() => {
+  const started = startRound();
+  console.log("Round started:", started);
+}, 5000);
+
 }, 2000);
+}
 
 function startRound() {
   if (!currentRound || currentRound.status !== "waiting") {
