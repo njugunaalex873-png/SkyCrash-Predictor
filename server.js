@@ -7,6 +7,129 @@ const PORT = process.env.PORT || 3000;
 
 const PREDICTOR_PASSWORD = process.env.PREDICTOR_PASSWORD;
 const TOKEN_SECRET = process.env.TOKEN_SECRET;
+// Initiate an M-Pesa Daraja SANDBOX STK Push.
+// This test endpoint does not credit player balances.
+app.post("/api/mpesa/stkpush", async (req, res) => {
+  try {
+    if (
+      !MPESA_CONSUMER_KEY ||
+      !MPESA_CONSUMER_SECRET ||
+      !MPESA_SHORTCODE ||
+      !MPESA_PASSKEY ||
+      !MPESA_CALLBACK_URL
+    ) {
+      return res.status(503).json({
+        error: "M-Pesa sandbox is not configured."
+      });
+    }
+
+    const phone = String(req.body?.phone || "").replace(/\s+/g, "");
+    const amount = Number(req.body?.amount);
+
+    if (!/^254\d{9}$/.test(phone)) {
+      return res.status(400).json({
+        error: "Enter a Kenyan phone number like 254712345678."
+      });
+    }
+
+    if (
+      !Number.isSafeInteger(amount) ||
+      amount < 1 ||
+      amount > 10000
+    ) {
+      return res.status(400).json({
+        error: "Enter a whole-number sandbox amount between 1 and 10000."
+      });
+    }
+
+    if (!MPESA_CALLBACK_URL.startsWith("https://")) {
+      return res.status(500).json({
+        error: "The callback URL must use HTTPS."
+      });
+    }
+
+    // Obtain a Daraja sandbox OAuth access token.
+    const credentials = Buffer.from(
+      `${MPESA_CONSUMER_KEY}:${MPESA_CONSUMER_SECRET}`
+    ).toString("base64");
+
+    const tokenResponse = await fetch(
+      "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Basic ${credentials}`
+        }
+      }
+    );
+
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenResponse.ok || !tokenData.access_token) {
+      console.error("Daraja sandbox token request failed.");
+      return res.status(502).json({
+        error: "Could not connect to the M-Pesa sandbox."
+      });
+    }
+
+    // Daraja expects an East Africa local timestamp.
+    const now = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    const timestamp = now.toISOString()
+      .replace(/[-:T.Z]/g, "")
+      .slice(0, 14);
+
+    const password = Buffer.from(
+      `${MPESA_SHORTCODE}${MPESA_PASSKEY}${timestamp}`
+    ).toString("base64");
+
+    const stkResponse = await fetch(
+      "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          BusinessShortCode: MPESA_SHORTCODE,
+          Password: password,
+          Timestamp: timestamp,
+          TransactionType: "CustomerPayBillOnline",
+          Amount: amount,
+          PartyA: phone,
+          PartyB: MPESA_SHORTCODE,
+          PhoneNumber: phone,
+          CallBackURL: MPESA_CALLBACK_URL,
+          AccountReference: "SkyCrashTest",
+          TransactionDesc: "Sandbox payment test"
+        })
+      }
+    );
+
+    const stkData = await stkResponse.json();
+
+    if (!stkResponse.ok || stkData.ResponseCode !== "0") {
+      console.error("Daraja sandbox STK request was rejected.");
+      return res.status(502).json({
+        error: "Safaricom did not accept the sandbox STK request."
+      });
+    }
+
+    // Return request identifiers for testing only.
+    // This is not proof of payment.
+    return res.status(200).json({
+      message: "Sandbox STK request accepted.",
+      checkoutRequestId: stkData.CheckoutRequestID,
+      customerMessage: stkData.CustomerMessage
+    });
+  } catch (error) {
+    console.error("M-Pesa sandbox request failed:", error.message);
+
+    return res.status(502).json({
+      error: "Could not complete the sandbox STK request."
+    });
+  }
+});
 // M-Pesa Daraja sandbox configuration
 const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY;
 const MPESA_CONSUMER_SECRET = process.env.MPESA_CONSUMER_SECRET;
