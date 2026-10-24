@@ -290,6 +290,7 @@ app.post("/api/next-round", requireLogin, (req, res) => {
   }
 
   createRound();
+  startRound();
 
   noCache(res);
 
