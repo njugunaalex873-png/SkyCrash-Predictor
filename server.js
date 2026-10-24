@@ -85,7 +85,6 @@ function publicRound() {
 }
 
 function completeRound() {
-function completeRound() {
 if (!currentRound || currentRound.status !== "running") return;
 
 currentRound.status = "crashed";
