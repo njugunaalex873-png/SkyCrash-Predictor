@@ -29,7 +29,18 @@
       margin-bottom: 25px;
     }
 
-    .logo { font-size: 38px; }
+    .logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.logo svg {
+  display: block;
+  width: 110px;
+  height: 110px;
+}
 
     h1 {
       margin: 8px 0;
@@ -151,7 +162,91 @@
 <body>
   <main class="container">
     <header>
-      <div class="logo">🚀</div>
+      <div class="logo">
+  <svg
+    width="110"
+    height="110"
+    viewBox="0 0 120 120"
+    xmlns="http://www.w3.org/2000/svg"
+    role="img"
+    aria-label="SkyCrash Predictor logo"
+  >
+    <defs>
+      <linearGradient id="skyGreen" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#70ffb0"/>
+        <stop offset="100%" stop-color="#00c982"/>
+      </linearGradient>
+    </defs>
+
+    <rect
+      width="120"
+      height="120"
+      rx="25"
+      fill="#111d30"
+      stroke="#253d59"
+      stroke-width="2"
+    />
+
+    <path
+      d="M22 78 L48 63 L72 62"
+      fill="none"
+      stroke="url(#skyGreen)"
+      stroke-width="4"
+      stroke-linecap="round"
+    />
+
+    <path
+      d="M32 87 L55 74"
+      fill="none"
+      stroke="#45e6a0"
+      stroke-width="2"
+      stroke-linecap="round"
+      opacity=".6"
+    />
+
+    <path
+      d="M48 60 Q65 30 94 24
+         L85 46 L70 62 L48 60Z"
+      fill="#f4f8ff"
+    />
+
+    <path
+      d="M70 62 L85 46 L94 24
+         Q99 48 70 62Z"
+      fill="url(#skyGreen)"
+    />
+
+    <path
+      d="M56 58 L48 47 L43 61 L56 65Z"
+      fill="#45e6a0"
+    />
+
+    <circle
+      cx="67"
+      cy="55"
+      r="4"
+      fill="#08111f"
+      stroke="#45e6a0"
+      stroke-width="2"
+    />
+
+    <path
+      d="M22 96 H98"
+      stroke="#30465e"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+
+    <text
+      x="60"
+      y="108"
+      fill="#45e6a0"
+      font-size="9"
+      font-weight="bold"
+      text-anchor="middle"
+    >SKYCRASH</text>
+  </svg>
+      </div>
       <h1>SkyCrash Predictor</h1>
       <p class="subtitle">Private dashboard for your own SkyCrash demo</p>
     </header>
