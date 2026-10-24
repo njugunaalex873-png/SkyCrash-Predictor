@@ -163,7 +163,7 @@ app.use((req, res, next) => {
 
 app.use(cors({
   origin: ["https://njugunaalex873-png.github.io"],
-  methods: ["GET", "POST"],
+  methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 204
 }));
