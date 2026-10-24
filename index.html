@@ -182,7 +182,7 @@
 
     <section id="dashboard" class="hidden">
       <section class="card">
-        <div class="label">Current server round result</div>
+        <div class="label">Round Crash Point</div>
         <div class="multiplier" id="multiplier">--.--x</div>
 
         <div class="status" id="status" role="status">
@@ -288,7 +288,6 @@ let isPollingMultiplier = false;
         dashboard.classList.remove("hidden");
 
         await loadDashboard();
-startMultiplierUpdates();
       } catch (error) {
         loginStatus.textContent =
           error.message === "Failed to fetch"
@@ -299,8 +298,8 @@ startMultiplierUpdates();
       }
     });
 
-    async function loadDashboard() {
-  statusElement.textContent = "Loading current round...";
+async function loadDashboard() {
+  statusElement.textContent = "Loading round crash point...";
 
   try {
     const [round, historyData] = await Promise.all([
@@ -308,29 +307,12 @@ startMultiplierUpdates();
       apiRequest("/api/history")
     ]);
 
-    if (round.status === "running") {
-      const gameData = await apiRequest("/api/game-multiplier");
-
-      if (
-        gameData.status === "running" &&
-        Number.isFinite(gameData.multiplier)
-      ) {
-        multiplierElement.textContent =
-          gameData.multiplier.toFixed(2) + "x";
-      } else {
-        multiplierElement.textContent = "Waiting...";
-      }
-    } else if (round.status === "crashed") {
-      multiplierElement.textContent =
-        Number(round.crashAt).toFixed(2) + "x";
-    } else {
-      multiplierElement.textContent = "1.00x";
-    }
+    multiplierElement.textContent =
+      Number(round.crashAt).toFixed(2) + "x";
 
     statusElement.textContent =
-      "Server round #" + round.roundId +
-      " · Status: " + round.status +
-      " · Created: " + new Date(round.createdAt).toLocaleString();
+      "Round #" + round.roundId +
+      " · Status: " + round.status;
 
     renderHistory(historyData.rounds || []);
   } catch (error) {
@@ -340,7 +322,7 @@ startMultiplierUpdates();
       logout();
     }
   }
-    }
+}
     async function updateMultiplier() {
   if (!sessionToken || isPollingMultiplier) return;
 
@@ -421,10 +403,7 @@ function stopMultiplierUpdates() {
       });
     }
 
-    refreshButton.addEventListener("click", async function () {
-  await loadDashboard();
-  startMultiplierUpdates();
-});
+    refreshButton.addEventListener("click", loadDashboard);
 
     function logout() {
   sessionToken = null;
