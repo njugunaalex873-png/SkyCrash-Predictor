@@ -144,13 +144,22 @@ const HISTORY_LIMIT = 50;
 const TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 
 
+
 app.use((req, res, next) => {
-  if (req.path.startsWith("/api/mpesa")) {
-    console.log("MPESA DIAGNOSTIC:", req.method, req.path);
-    console.log("Request origin:", req.get("origin") || "none");
+  if (req.path === "/api/mpesa/stkpush") {
+    res.on("finish", () => {
+      console.log("MPESA HTTP CHECK:", {
+        method: req.method,
+        status: res.statusCode,
+        allowOrigin: res.getHeader("Access-Control-Allow-Origin"),
+        allowMethods: res.getHeader("Access-Control-Allow-Methods"),
+        allowHeaders: res.getHeader("Access-Control-Allow-Headers")
+      });
+    });
   }
   next();
 });
+
 
 app.use(cors({
   origin: ["https://njugunaalex873-png.github.io"],
