@@ -159,6 +159,16 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
+app.options(
+  "/api/mpesa/stkpush",
+  cors({
+    origin: "https://njugunaalex873-png.github.io",
+    methods: ["POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204
+  })
+);
+
 app.use(express.json({ limit: "10kb" }));
 
 if (!PREDICTOR_PASSWORD || !TOKEN_SECRET) {
