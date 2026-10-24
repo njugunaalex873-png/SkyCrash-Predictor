@@ -232,7 +232,8 @@
     const logoutButton = document.getElementById("logout-button");
 
     let sessionToken = null;
-    let multiplierPollTimer = null;
+let multiplierPollTimer = null;
+let isPollingMultiplier = false;
 
     async function apiRequest(path, options = {}) {
       const headers = {
@@ -309,11 +310,15 @@
     if (round.status === "running") {
       const gameData = await apiRequest("/api/game-multiplier");
 
-      multiplierElement.textContent =
+      if (
         gameData.status === "running" &&
         Number.isFinite(gameData.multiplier)
-          ? gameData.multiplier.toFixed(2) + "x"
-          : "Waiting...";
+      ) {
+        multiplierElement.textContent =
+          gameData.multiplier.toFixed(2) + "x";
+      } else {
+        multiplierElement.textContent = "Waiting...";
+      }
     } else if (round.status === "crashed") {
       multiplierElement.textContent =
         Number(round.crashAt).toFixed(2) + "x";
@@ -335,6 +340,60 @@
     }
   }
     }
+    async function updateMultiplier() {
+  if (!sessionToken || isPollingMultiplier) return;
+
+  isPollingMultiplier = true;
+
+  try {
+    const data = await apiRequest("/api/game-multiplier");
+
+    if (data.status === "running" &&
+        Number.isFinite(data.multiplier)) {
+      multiplierElement.textContent =
+        data.multiplier.toFixed(2) + "x";
+
+      statusElement.textContent =
+        "Round #" + data.roundId + " · Running";
+    } else if (data.status === "crashed") {
+      multiplierElement.textContent =
+        Number(data.crashAt).toFixed(2) + "x";
+
+      statusElement.textContent =
+        "Round #" + data.roundId + " · Crashed";
+
+      // Stop polling until the next round is available.
+      stopMultiplierUpdates();
+    } else {
+      statusElement.textContent =
+        "Round #" + (data.roundId ?? "—") + " · Waiting";
+    }
+  } catch (error) {
+    statusElement.textContent = error.message;
+
+    if (error.message.toLowerCase().includes("log in")) {
+      logout();
+    }
+  } finally {
+    isPollingMultiplier = false;
+  }
+}
+
+function startMultiplierUpdates() {
+  stopMultiplierUpdates();
+
+  updateMultiplier();
+
+  // Poll at a reasonable rate to avoid excessive server requests.
+  multiplierPollTimer = setInterval(updateMultiplier, 150);
+}
+
+function stopMultiplierUpdates() {
+  if (multiplierPollTimer !== null) {
+    clearInterval(multiplierPollTimer);
+    multiplierPollTimer = null;
+  }
+}
 
     function renderHistory(rounds) {
       historyElement.replaceChildren();
@@ -362,7 +421,10 @@
       });
     }
 
-    refreshButton.addEventListener("click", loadDashboard);
+    refreshButton.addEventListener("click", async function () {
+  await loadDashboard();
+  startMultiplierUpdates();
+});
 
     function logout() {
       sessionToken = null;
