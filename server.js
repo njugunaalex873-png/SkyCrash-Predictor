@@ -38,6 +38,36 @@ function generateCrashPoint() {
   );
 }
 
+function createRound() {
+    // Avoid creating another round while one is still active.
+    if (currentRound && currentRound.status !== "crashed") {
+        return currentRound;
+    }
+
+    roundNumber++;
+
+    const createdAt = new Date().toISOString();
+
+    currentRound = {
+        roundId: roundNumber,
+        createdAt: createdAt,
+        startedAt: null,
+        endedAt: null,
+        status: "waiting",
+        crashAt: generateCrashPoint()
+    };
+
+    history.unshift({ ...currentRound });
+
+    // Keep only the most recent rounds.
+    if (history.length > HISTORY_LIMIT) {
+        history.length = HISTORY_LIMIT;
+    }
+
+    console.log("Created round:", roundNumber);
+
+    return currentRound;
+}
 function noCache(res) {
   res.set("Cache-Control", "no-store");
 }
