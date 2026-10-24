@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#08111f"/>
+
+  <circle cx="256" cy="210" r="125"
+          fill="none" stroke="#45e6a0" stroke-width="16"
+          stroke-dasharray="600 200"
+          transform="rotate(140 256 210)"/>
+
+  <path d="M105 300 L205 245 L350 125
+           L315 235 L220 310 L105 300Z"
+        fill="#f4f8ff"/>
+
+  <path d="M220 310 L315 235 L350 125
+           L275 190 L220 310Z"
+        fill="#45e6a0"/>
+
+  <path d="M90 340 L190 290"
+        stroke="#45e6a0" stroke-width="14"
+        stroke-linecap="round"/>
+
+  <text x="256" y="405" font-size="49"
+        font-family="Arial,sans-serif"
+        font-weight="bold" text-anchor="middle"
+        fill="#45e6a0">SKYCRASH</text>
+
+  <text x="256" y="450" font-size="25"
+        font-family="Arial,sans-serif"
+        letter-spacing="5" text-anchor="middle"
+        fill="#ffffff">PREDICTOR</text>
+</svg>
