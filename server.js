@@ -143,6 +143,15 @@ const ROUND_DURATION_MS = 15000;
 const HISTORY_LIMIT = 50;
 const TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api/mpesa")) {
+    console.log("MPESA DIAGNOSTIC:", req.method, req.path);
+    console.log("Request origin:", req.get("origin") || "none");
+  }
+  next();
+});
+
 app.use(cors({
   origin: ["https://njugunaalex873-png.github.io"],
   methods: ["GET", "POST"],
