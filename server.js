@@ -23,7 +23,9 @@ app.post("/api/mpesa/stkpush", async (req, res) => {
       });
     }
 
-    const phone = String(req.body?.phone || "").replace(/\s+/g, "");
+    console.log("STK request body:", req.body);
+
+const phone = String(req.body?.phone || "").replace(/\s+/g, "");
     const amount = Number(req.body?.amount);
 
     if (!/^254\d{9}$/.test(phone)) {
