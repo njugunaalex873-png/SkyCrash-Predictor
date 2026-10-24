@@ -232,6 +232,7 @@
     const logoutButton = document.getElementById("logout-button");
 
     let sessionToken = null;
+    let multiplierPollTimer = null;
 
     async function apiRequest(path, options = {}) {
       const headers = {
