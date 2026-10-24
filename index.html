@@ -315,6 +315,14 @@
 
   <script>
     "use strict";
+    if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js")
+      .catch(function (error) {
+        console.error("Service worker registration failed:", error);
+      });
+  });
+    }
 
     const API_BASE = "https://skycrash-predictor.onrender.com";
 
