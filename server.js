@@ -7,6 +7,12 @@ const PORT = process.env.PORT || 3000;
 
 const PREDICTOR_PASSWORD = process.env.PREDICTOR_PASSWORD;
 const TOKEN_SECRET = process.env.TOKEN_SECRET;
+// M-Pesa Daraja sandbox configuration
+const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY;
+const MPESA_CONSUMER_SECRET = process.env.MPESA_CONSUMER_SECRET;
+const MPESA_SHORTCODE = process.env.MPESA_SHORTCODE;
+const MPESA_PASSKEY = process.env.MPESA_PASSKEY;
+const MPESA_CALLBACK_URL = process.env.MPESA_CALLBACK_URL;
 
 const ROUND_DURATION_MS = 15000;
 const HISTORY_LIMIT = 50;
