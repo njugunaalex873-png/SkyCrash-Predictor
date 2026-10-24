@@ -288,6 +288,7 @@ let isPollingMultiplier = false;
         dashboard.classList.remove("hidden");
 
         await loadDashboard();
+startMultiplierUpdates();
       } catch (error) {
         loginStatus.textContent =
           error.message === "Failed to fetch"
@@ -356,14 +357,13 @@ let isPollingMultiplier = false;
       statusElement.textContent =
         "Round #" + data.roundId + " · Running";
     } else if (data.status === "crashed") {
-      multiplierElement.textContent =
-        Number(data.crashAt).toFixed(2) + "x";
+  multiplierElement.textContent =
+    Number(data.crashAt).toFixed(2) + "x";
 
-      statusElement.textContent =
-        "Round #" + data.roundId + " · Crashed";
+  statusElement.textContent =
+    "Round #" + data.roundId + " · Crashed";
 
-      // Stop polling until the next round is available.
-      stopMultiplierUpdates();
+  // Keep polling so the dashboard can detect the next round.
     } else {
       statusElement.textContent =
         "Round #" + (data.roundId ?? "—") + " · Waiting";
@@ -427,13 +427,17 @@ function stopMultiplierUpdates() {
 });
 
     function logout() {
-      sessionToken = null;
-      dashboard.classList.add("hidden");
-      loginCard.classList.remove("hidden");
-      multiplierElement.textContent = "--.--x";
-      statusElement.textContent = "Please sign in again.";
-      historyElement.replaceChildren();
-      passwordInput.value = "";
+  sessionToken = null;
+  stopMultiplierUpdates();
+
+  dashboard.classList.add("hidden");
+  loginCard.classList.remove("hidden");
+
+  multiplierElement.textContent = "--.--x";
+  statusElement.textContent = "Please sign in again.";
+
+  historyElement.replaceChildren();
+  passwordInput.value = "";
     }
 
     logoutButton.addEventListener("click", logout);
