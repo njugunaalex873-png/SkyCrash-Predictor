@@ -158,7 +158,8 @@ const phone = String(req.body?.phone || "").replace(/\s+/g, "");
     const stkData = await stkResponse.json();
 
     if (!stkResponse.ok || stkData.ResponseCode !== "0") {
-      console.error("Daraja sandbox STK request was rejected.");
+      console.error("Daraja STK HTTP status:", stkResponse.status);
+      console.error("Daraja STK response:", JSON.stringify(stkData));
       return res.status(502).json({
         error: "Safaricom did not accept the sandbox STK request."
       });
